@@ -7,6 +7,7 @@ load_dotenv(ROOT_DIR / ".env")
 import os
 import uuid
 import logging
+import secrets
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Literal
 
@@ -158,6 +159,26 @@ class ReportCreate(BaseModel):
     target_type: Literal["event", "comment"]
     target_id: str
     reason: str = Field(min_length=3, max_length=500)
+
+
+async def create_notification(user_id: str, ntype: str, title: str, body: str, event_id: Optional[str] = None):
+    """Best-effort notification insert."""
+    if not user_id:
+        return
+    doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "type": ntype,
+        "title": title,
+        "body": body,
+        "event_id": event_id,
+        "is_read": False,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        await db.notifications.insert_one(doc)
+    except Exception:
+        pass
 
 
 async def require_admin(user=Depends(get_current_user)) -> dict:
@@ -397,8 +418,23 @@ async def join_event(event_id: str, user=Depends(get_current_user)):
 
     if ev.get("requires_approval") and ev["organizer_id"] != user["id"]:
         await db.events.update_one({"id": event_id}, {"$addToSet": {"pending": user["id"]}})
+        await create_notification(
+            ev["organizer_id"],
+            "join_request",
+            "Nowe zgłoszenie do wydarzenia",
+            f"{user['nick']} chce dołączyć do „{ev['title']}”",
+            event_id,
+        )
         return {"status": "pending"}
     await db.events.update_one({"id": event_id}, {"$addToSet": {"participants": user["id"]}})
+    if ev["organizer_id"] != user["id"]:
+        await create_notification(
+            ev["organizer_id"],
+            "joined",
+            "Nowy uczestnik",
+            f"{user['nick']} dołączył do „{ev['title']}”",
+            event_id,
+        )
     return {"status": "joined"}
 
 
@@ -431,6 +467,13 @@ async def approve_join(event_id: str, user_id: str, user=Depends(get_current_use
         {"id": event_id},
         {"$pull": {"pending": user_id}, "$addToSet": {"participants": user_id}},
     )
+    await create_notification(
+        user_id,
+        "approved",
+        "Zgłoszenie zaakceptowane",
+        f"Zostałeś dopisany do „{ev['title']}”",
+        event_id,
+    )
     return {"ok": True}
 
 
@@ -442,6 +485,13 @@ async def reject_join(event_id: str, user_id: str, user=Depends(get_current_user
     if ev["organizer_id"] != user["id"]:
         raise HTTPException(status_code=403, detail="Brak uprawnień")
     await db.events.update_one({"id": event_id}, {"$pull": {"pending": user_id}})
+    await create_notification(
+        user_id,
+        "rejected",
+        "Zgłoszenie odrzucone",
+        f"Twoje zgłoszenie do „{ev['title']}” zostało odrzucone",
+        event_id,
+    )
     return {"ok": True}
 
 
@@ -500,6 +550,15 @@ async def add_comment(request: Request, event_id: str, payload: CommentCreate, u
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.comments.insert_one(comment)
+    # Notify organizer (if not the author).
+    if ev["organizer_id"] != user["id"]:
+        await create_notification(
+            ev["organizer_id"],
+            "comment",
+            "Nowy komentarz",
+            f"{user['nick']}: „{payload.text.strip()[:80]}”",
+            event_id,
+        )
     return {
         "id": comment["id"],
         "text": comment["text"],
@@ -708,6 +767,129 @@ async def admin_delete_comment(comment_id: str, admin=Depends(require_admin)):
     return {"ok": True}
 
 
+# --------------------------------------------------------------------------- #
+# Invites
+# --------------------------------------------------------------------------- #
+@api.post("/events/{event_id}/invite")
+async def generate_invite(event_id: str, user=Depends(get_current_user)):
+    ev = await db.events.find_one({"id": event_id})
+    if not ev:
+        raise HTTPException(status_code=404, detail="Wydarzenie nie istnieje")
+    if ev["organizer_id"] != user["id"]:
+        raise HTTPException(status_code=403, detail="Tylko organizator może generować zaproszenia")
+    token = ev.get("invite_token")
+    if not token:
+        token = secrets.token_urlsafe(12)
+        await db.events.update_one({"id": event_id}, {"$set": {"invite_token": token}})
+    return {"invite_token": token}
+
+
+@api.delete("/events/{event_id}/invite")
+async def revoke_invite(event_id: str, user=Depends(get_current_user)):
+    ev = await db.events.find_one({"id": event_id})
+    if not ev:
+        raise HTTPException(status_code=404, detail="Wydarzenie nie istnieje")
+    if ev["organizer_id"] != user["id"]:
+        raise HTTPException(status_code=403, detail="Tylko organizator może wyłączać zaproszenia")
+    await db.events.update_one({"id": event_id}, {"$unset": {"invite_token": ""}})
+    return {"ok": True}
+
+
+@api.get("/events/by_invite/{token}")
+async def preview_invite(token: str):
+    ev = await db.events.find_one({"invite_token": token})
+    if not ev:
+        raise HTTPException(status_code=404, detail="Zaproszenie nieaktywne")
+    return await _event_out(ev)
+
+
+@api.post("/events/by_invite/{token}/join")
+async def join_by_invite(token: str, user=Depends(get_current_user)):
+    ev = await db.events.find_one({"invite_token": token})
+    if not ev:
+        raise HTTPException(status_code=404, detail="Zaproszenie nieaktywne")
+    if _is_archived(ev.get("starts_at")):
+        raise HTTPException(status_code=400, detail="Wydarzenie już się zakończyło")
+    if user["id"] in ev.get("participants", []):
+        return {"status": "joined", "event_id": ev["id"]}
+    if len(ev.get("participants", [])) >= ev["max_participants"]:
+        raise HTTPException(status_code=400, detail="Brak wolnych miejsc")
+    # Invite bypasses approval, but still respects capacity.
+    await db.events.update_one(
+        {"id": ev["id"]},
+        {"$addToSet": {"participants": user["id"]}, "$pull": {"pending": user["id"]}},
+    )
+    if ev["organizer_id"] != user["id"]:
+        await create_notification(
+            ev["organizer_id"],
+            "invite_joined",
+            "Ktoś dołączył przez zaproszenie",
+            f"{user['nick']} dołączył do „{ev['title']}” przez link",
+            ev["id"],
+        )
+    return {"status": "joined", "event_id": ev["id"]}
+
+
+# --------------------------------------------------------------------------- #
+# Notifications
+# --------------------------------------------------------------------------- #
+@api.get("/notifications")
+async def list_notifications(limit: int = 50, user=Depends(get_current_user)):
+    limit = max(1, min(200, limit))
+    items = await db.notifications.find(
+        {"user_id": user["id"]}
+    ).sort("created_at", -1).limit(limit).to_list(limit)
+    unread = await db.notifications.count_documents({"user_id": user["id"], "is_read": False})
+    for n in items:
+        n.pop("_id", None)
+    return {"notifications": items, "unread": unread}
+
+
+@api.post("/notifications/{notif_id}/read")
+async def mark_read(notif_id: str, user=Depends(get_current_user)):
+    r = await db.notifications.update_one(
+        {"id": notif_id, "user_id": user["id"]},
+        {"$set": {"is_read": True}},
+    )
+    if r.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Powiadomienie nie istnieje")
+    return {"ok": True}
+
+
+@api.post("/notifications/read-all")
+async def mark_all_read(user=Depends(get_current_user)):
+    r = await db.notifications.update_many(
+        {"user_id": user["id"], "is_read": False},
+        {"$set": {"is_read": True}},
+    )
+    return {"updated": r.modified_count}
+
+
+# --------------------------------------------------------------------------- #
+# Calendar (upcoming events grouped by day)
+# --------------------------------------------------------------------------- #
+@api.get("/calendar")
+async def calendar_view(days: int = 30, user=Depends(get_optional_user)):
+    """Return upcoming events grouped by day. `days` = forward window (default 30)."""
+    days = max(1, min(90, days))
+    now = datetime.now(timezone.utc)
+    end = now + timedelta(days=days)
+    q: dict = {"starts_at": {"$gte": now.isoformat(), "$lte": end.isoformat()}}
+    if not user:
+        q["is_public"] = True
+    cursor = db.events.find(q).sort("starts_at", 1).limit(500)
+    grouped: dict = {}
+    async for ev in cursor:
+        if not ev.get("is_public") and user:
+            if user["id"] != ev["organizer_id"] and user["id"] not in ev.get("participants", []):
+                continue
+        e = await _event_out(ev)
+        day = e["starts_at"][:10]  # YYYY-MM-DD
+        grouped.setdefault(day, []).append(e)
+    days_list = [{"date": d, "events": grouped[d]} for d in sorted(grouped.keys())]
+    return {"days": days_list}
+
+
 @api.get("/")
 async def root():
     return {"app": "MapMeet", "status": "ok"}
@@ -756,6 +938,8 @@ async def seed():
     await db.comments.create_index("event_id")
     await db.reports.create_index("status")
     await db.reports.create_index("target_id")
+    await db.notifications.create_index([("user_id", 1), ("created_at", -1)])
+    await db.notifications.create_index([("user_id", 1), ("is_read", 1)])
 
     admin = await db.users.find_one({"email": ADMIN_EMAIL})
     if not admin:

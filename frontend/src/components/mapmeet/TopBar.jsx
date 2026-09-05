@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Search, Plus, LogOut, User as UserIcon, MapPin } from "lucide-react";
+import { Search, Plus, LogOut, User as UserIcon, MapPin, Map as MapIcon, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/context/AuthContext";
+import NotificationsBell from "./NotificationsBell";
 
 const CITIES = [
   { name: "Cała Polska", lat: 52.069167, lon: 19.480556, zoom: 6.5 },
@@ -32,6 +33,9 @@ export default function TopBar({
   onFocusCity,
   onSearch,
   searchValue,
+  view,
+  onToggleView,
+  onOpenEventFromNotification,
 }) {
   const { user, logout } = useAuth();
   const [city, setCity] = useState("Cała Polska");
@@ -95,6 +99,31 @@ export default function TopBar({
         >
           <Plus size={16} /> Utwórz wydarzenie
         </Button>
+
+        <div className="mm-view-toggle" role="tablist" data-testid="view-toggle">
+          <button
+            role="tab"
+            aria-selected={view === "map"}
+            data-testid="view-toggle-map"
+            className={`mm-view-toggle-btn ${view === "map" ? "is-active" : ""}`}
+            onClick={() => onToggleView("map")}
+            title="Widok mapy"
+          >
+            <MapIcon size={15} /> Mapa
+          </button>
+          <button
+            role="tab"
+            aria-selected={view === "calendar"}
+            data-testid="view-toggle-calendar"
+            className={`mm-view-toggle-btn ${view === "calendar" ? "is-active" : ""}`}
+            onClick={() => onToggleView("calendar")}
+            title="Widok kalendarza"
+          >
+            <CalendarDays size={15} /> Kalendarz
+          </button>
+        </div>
+
+        {user && <NotificationsBell onOpenEvent={onOpenEventFromNotification} />}
 
         {user ? (
           <DropdownMenu>

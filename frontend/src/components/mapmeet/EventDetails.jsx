@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Users, Clock, MapPin as MapPinIcon, Send, Trash2, CheckCircle2, XCircle, Flag } from "lucide-react";
+import { Users, Clock, MapPin as MapPinIcon, Send, Trash2, CheckCircle2, XCircle, Flag, Link2, Copy } from "lucide-react";
 import { api, CATEGORY_META, formatApiError, formatDatePL } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ export default function EventDetails({ event, onChanged, onDeleted, onRequireAut
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [reportTarget, setReportTarget] = useState(null);
+  const [inviteLink, setInviteLink] = useState("");
 
   const meta = CATEGORY_META[details.category] || CATEGORY_META.Inne;
   const isOrganizer = user && user.id === details.organizer_id;
@@ -116,6 +117,32 @@ export default function EventDetails({ event, onChanged, onDeleted, onRequireAut
     }
   };
 
+  const generateInvite = async () => {
+    try {
+      const { data } = await api.post(`/events/${event.id}/invite`);
+      const link = `${window.location.origin}/?invite=${data.invite_token}`;
+      setInviteLink(link);
+      try {
+        await navigator.clipboard.writeText(link);
+        toast.success("Link zapraszający skopiowany do schowka");
+      } catch {
+        toast.success("Link zapraszający wygenerowany");
+      }
+    } catch (e) {
+      toast.error(formatApiError(e));
+    }
+  };
+
+  const copyInvite = async () => {
+    if (!inviteLink) return;
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      toast.success("Skopiowano");
+    } catch {
+      toast.error("Nie udało się skopiować");
+    }
+  };
+
   return (
     <div className="mm-details" data-testid="event-details">
       <div className="mm-details-hero" style={{ background: meta.bg, borderColor: meta.border }}>
@@ -190,6 +217,39 @@ export default function EventDetails({ event, onChanged, onDeleted, onRequireAut
           </Button>
         )}
       </div>
+
+      {isOrganizer && !details.is_archived && (
+        <div className="mm-invite-box" data-testid="event-invite-box">
+          <div className="mm-invite-head">
+            <Link2 size={14} />
+            <span className="mm-caption">Link zapraszający</span>
+          </div>
+          {inviteLink ? (
+            <div className="mm-invite-row">
+              <input
+                readOnly
+                value={inviteLink}
+                onFocus={(e) => e.target.select()}
+                className="mm-invite-input"
+                data-testid="event-invite-link-input"
+              />
+              <Button size="icon" variant="outline" onClick={copyInvite} aria-label="Kopiuj">
+                <Copy size={14} />
+              </Button>
+            </div>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={generateInvite}
+              data-testid="event-invite-generate-btn"
+            >
+              <Link2 size={14} /> Wygeneruj link i skopiuj
+            </Button>
+          )}
+          <p className="mm-hint">Osoby z linkiem dołączają bez akceptacji (do limitu miejsc).</p>
+        </div>
+      )}
 
       <Separator className="my-4" />
 

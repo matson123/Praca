@@ -11,6 +11,7 @@ import FiltersPanel from "@/components/mapmeet/FiltersPanel";
 import ProfilePanel from "@/components/mapmeet/ProfilePanel";
 import AuthDialog from "@/components/mapmeet/AuthDialog";
 import AdminPanel from "@/components/mapmeet/AdminPanel";
+import CalendarView from "@/components/mapmeet/CalendarView";
 import { Button } from "@/components/ui/button";
 import { Compass, LocateFixed, Layers, Home as HomeIcon } from "lucide-react";
 
@@ -36,6 +37,44 @@ export default function MapPage() {
     max_km: null,
   });
   const [search, setSearch] = useState("");
+  const [view, setView] = useState("map"); // 'map' | 'calendar'
+
+  // Handle ?invite=token in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("invite");
+    if (!token) return;
+    (async () => {
+      try {
+        const { data } = await api.get(`/events/by_invite/${token}`);
+        setSelected(data);
+        setPanel("details");
+        setFocus({ lat: data.lat, lon: data.lon, zoom: 13 });
+        if (user) {
+          try {
+            await api.post(`/events/by_invite/${token}/join`);
+            toast.success("Dołączono do wydarzenia przez zaproszenie!");
+            const fresh = await api.get(`/events/${data.id}`);
+            setSelected(fresh.data);
+            loadEvents();
+          } catch (e) {
+            // already in / capacity full etc.
+          }
+        } else {
+          setAuthMode("login");
+          setAuthOpen(true);
+          toast("Zaloguj się, aby dołączyć przez zaproszenie.");
+        }
+      } catch {
+        toast.error("Zaproszenie nieaktywne lub wydarzenie usunięte");
+      } finally {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("invite");
+        window.history.replaceState({}, "", url.toString());
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const loadEvents = useCallback(async () => {
     try {
@@ -163,56 +202,79 @@ export default function MapPage() {
         onFocusCity={(c) => setFocus({ lat: c.lat, lon: c.lon, zoom: c.zoom })}
         onSearch={setSearch}
         searchValue={search}
+        view={view}
+        onToggleView={(v) => {
+          setView(v);
+          if (v === "map") closePanel();
+        }}
+        onOpenEventFromNotification={(ev) => {
+          setView("map");
+          onSelectEvent(ev);
+        }}
       />
 
-      <MapView
-        events={events}
-        onSelectEvent={onSelectEvent}
-        pickMode={pickMode}
-        onPickLocation={onPickLocation}
-        pickedLocation={pickedLocation}
-        focus={focus}
-      />
+      {view === "map" ? (
+        <>
+          <MapView
+            events={events}
+            onSelectEvent={onSelectEvent}
+            pickMode={pickMode}
+            onPickLocation={onPickLocation}
+            pickedLocation={pickedLocation}
+            focus={focus}
+          />
 
-      {/* Floating map controls */}
-      <div className="mm-floating">
-        <Button
-          data-testid="map-reset-view-btn"
-          onClick={resetView}
-          variant="secondary"
-          className="mm-float-btn"
-          size="icon"
-          title="Cała Polska"
-        >
-          <HomeIcon size={18} />
-        </Button>
-        <Button
-          data-testid="map-my-location-btn"
-          onClick={useMyLocation}
-          variant="secondary"
-          className="mm-float-btn"
-          size="icon"
-          title="Moja lokalizacja"
-        >
-          <LocateFixed size={18} />
-        </Button>
-        <Button
-          data-testid="map-list-toggle-btn"
-          onClick={() => setPanel(panel === "list" ? null : "list")}
-          variant="secondary"
-          className="mm-float-btn mm-float-count"
-        >
-          <Layers size={16} /> {events.length}
-        </Button>
-      </div>
+          {/* Floating map controls */}
+          <div className="mm-floating">
+            <Button
+              data-testid="map-reset-view-btn"
+              onClick={resetView}
+              variant="secondary"
+              className="mm-float-btn"
+              size="icon"
+              title="Cała Polska"
+            >
+              <HomeIcon size={18} />
+            </Button>
+            <Button
+              data-testid="map-my-location-btn"
+              onClick={useMyLocation}
+              variant="secondary"
+              className="mm-float-btn"
+              size="icon"
+              title="Moja lokalizacja"
+            >
+              <LocateFixed size={18} />
+            </Button>
+            <Button
+              data-testid="map-list-toggle-btn"
+              onClick={() => setPanel(panel === "list" ? null : "list")}
+              variant="secondary"
+              className="mm-float-btn mm-float-count"
+            >
+              <Layers size={16} /> {events.length}
+            </Button>
+          </div>
 
-      {pickMode && (
-        <div className="mm-pick-banner">
-          <Compass size={16} />
-          <span>Kliknij na mapie w wybranym punkcie Polski, aby zapisać lokalizację.</span>
-          <button onClick={() => setPickMode(false)} className="mm-linkish">
-            Anuluj
-          </button>
+          {pickMode && (
+            <div className="mm-pick-banner">
+              <Compass size={16} />
+              <span>Kliknij na mapie w wybranym punkcie Polski, aby zapisać lokalizację.</span>
+              <button onClick={() => setPickMode(false)} className="mm-linkish">
+                Anuluj
+              </button>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="mm-calendar-wrap">
+          <CalendarView
+            onOpenEvent={(ev) => {
+              setView("map");
+              onSelectEvent(ev);
+            }}
+            onClose={() => setView("map")}
+          />
         </div>
       )}
 
