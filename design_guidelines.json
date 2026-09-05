@@ -1,0 +1,243 @@
+{
+  "project_name": "MapMeet",
+  "language": "pl",
+  "app_type": "hybrid_fullstack",
+  "description": "Polska platforma spotkań i wydarzeń na interaktywnej mapie z systemem filtrów, wysuwanym panelem bocznym, kategoriami, dołączaniem i dyskusją.",
+  "theme": "light_neutral_accented",
+  "design_philosophy": {
+    "archetype": "SWISS_TACTILE_MAP_MINIMALISM",
+    "core_principles": [
+      "Map First UX: Mapa zajmuje 100% ekranu jako główny widok z pływającymi szklanymi kontrolkami i wysuwanym panelem bocznym.",
+      "Category Color Coding: 8 czytelnych, wysokonasyconych barw akcentowych przypisanych do kategorii wydarzeń, zachowujących wysoki kontrast na jasnych kafelkach OpenStreetMap.",
+      "Anti-AI Aesthetic: Brak fioletowych gradientów (#7351B7 zabronione), brak Inter/Roboto w nagłówkach. Przejrzysta szwajcarska typografia i precyzyjne mikrointerakcje.",
+      "Polish First UI: Cały interfejs, etykiety, daty, powiadomienia oraz statusy prowadzone w języku polskim."
+    ]
+  },
+  "typography": {
+    "heading_font": "Cabinet Grotesk / Outfit / Plus Jakarta Sans",
+    "body_font": "DM Sans / Plus Jakarta Sans",
+    "mono_font": "JetBrains Mono / Fira Code",
+    "font_imports": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    ],
+    "scale": {
+      "h1": "text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-none",
+      "h2": "text-2xl sm:text-3xl font-bold tracking-tight",
+      "h3": "text-xl sm:text-2xl font-semibold tracking-tight",
+      "h4": "text-lg font-semibold tracking-normal",
+      "body_lg": "text-base font-normal leading-relaxed",
+      "body": "text-sm font-normal leading-normal",
+      "caption": "text-xs font-medium tracking-wide uppercase text-muted-foreground"
+    }
+  },
+  "colors": {
+    "neutrals": {
+      "bg_app": "#F8FAFC",
+      "bg_surface": "#FFFFFF",
+      "bg_glass": "rgba(255, 255, 255, 0.85)",
+      "border": "#E2E8F0",
+      "text_primary": "#0F172A",
+      "text_secondary": "#475569",
+      "text_muted": "#94A3B8"
+    },
+    "categories": {
+      "Sport": {
+        "hex": "#EF4444",
+        "bg_light": "#FEF2F2",
+        "border": "#FCA5A5",
+        "badge_text": "#991B1B",
+        "icon_name": "Trophy",
+        "label": "Sport"
+      },
+      "Kultura": {
+        "hex": "#8B5CF6",
+        "bg_light": "#F5F3FF",
+        "border": "#C4B5FD",
+        "badge_text": "#5B21B6",
+        "icon_name": "Palette",
+        "label": "Kultura"
+      },
+      "Muzyka": {
+        "hex": "#EC4899",
+        "bg_light": "#FDF2F8",
+        "border": "#FBCFE8",
+        "badge_text": "#9D174D",
+        "icon_name": "Music",
+        "label": "Muzyka"
+      },
+      "Jedzenie": {
+        "hex": "#F59E0B",
+        "bg_light": "#FFFBEB",
+        "border": "#FDE68A",
+        "badge_text": "#92400E",
+        "icon_name": "Utensils",
+        "label": "Jedzenie"
+      },
+      "Nauka": {
+        "hex": "#06B6D4",
+        "bg_light": "#ECFEFF",
+        "border": "#A5F3FC",
+        "badge_text": "#155E75",
+        "icon_name": "GraduationCap",
+        "label": "Nauka"
+      },
+      "Gry": {
+        "hex": "#10B981",
+        "bg_light": "#ECFDF5",
+        "border": "#A7F3D0",
+        "badge_text": "#065F46",
+        "icon_name": "Gamepad2",
+        "label": "Gry"
+      },
+      "Outdoor": {
+        "hex": "#15803D",
+        "bg_light": "#F0FDF4",
+        "border": "#86EFAC",
+        "badge_text": "#166534",
+        "icon_name": "Trees",
+        "label": "Outdoor"
+      },
+      "Inne": {
+        "hex": "#64748B",
+        "bg_light": "#F1F5F9",
+        "border": "#CBD5E1",
+        "badge_text": "#1E293B",
+        "icon_name": "MoreHorizontal",
+        "label": "Inne"
+      }
+    }
+  },
+  "layout_and_navigation": {
+    "top_bar": {
+      "height": "h-16",
+      "style": "fixed top-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 flex items-center justify-between shadow-xs",
+      "elements": [
+        "Brand Logo 'MapMeet' z minimalistyczną pinezką i badge 'Polska'",
+        "Wyszukiwarka wydarzeń (szukaj po tytule, mieście lub tagu)",
+        "Filtr szybki miast (Warszawa, Kraków, Wrocław, Poznań, Gdańsk, Katowice, cała Polska)",
+        "Przycisk '+ Stwórz wydarzenie' z akcentem",
+        "Avatar użytkownika / Menu profilu z powiadomieniami"
+      ]
+    },
+    "map_container": {
+      "style": "w-full h-screen pt-16 relative overflow-hidden bg-slate-100",
+      "leaflet_config": {
+        "default_center": [52.069167, 19.480556],
+        "default_zoom": 6.5,
+        "tile_layer": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        "attribution": "&copy; OpenStreetMap contributors"
+      }
+    },
+    "sliding_sidebar": {
+      "width": "w-full sm:w-[420px] md:w-[480px]",
+      "style": "fixed top-16 right-0 bottom-0 z-30 bg-white border-l border-slate-200 shadow-2xl transition-transform duration-300 ease-in-out overflow-y-auto",
+      "modes": [
+        "EVENTS_LIST: Przegląd wydarzeń w widocznym obszarze mapy z sortowaniem i kartami",
+        "EVENT_DETAILS: Szczegóły wybranego wydarzenia (data, organizator, limit miejsc, mapa dojazdu, lista uczestników, komentarze, przycisk dołączenia)",
+        "CREATE_EVENT: Formularz dodawania nowej pinezki (kliknięcie na mapie pobiera współrzędne)",
+        "FILTERS_PANEL: Zaawansowane filtrowanie (kategorie, zakres dat, dystans, darmowe/płatne, publiczne/prywatne)",
+        "USER_PROFILE: Profil użytkownika z historią utworzonych i dołączonych wydarzeń"
+      ]
+    },
+    "floating_controls": {
+      "style": "absolute bottom-6 left-6 z-20 flex flex-col gap-2.5",
+      "controls": [
+        "Reset widoku Polski (Centruj na Polskę)",
+        "Moja lokalizacja (Geolokalizacja)",
+        "Przełącznik podglądu satelitarnego / hybrydowego",
+        "Licznik wydarzeń w widoku"
+      ]
+    }
+  },
+  "required_packages": [
+    "leaflet",
+    "react-leaflet",
+    "leaflet.markercluster",
+    "lucide-react",
+    "framer-motion",
+    "sonner",
+    "date-fns"
+  ],
+  "image_urls": {
+    "meetup_social": [
+      {
+        "url": "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NjV8MHwxfHNlYXJjaHw3fHxwZW9wbGUlMjBtZWV0dXAlMjBzb2NpYWwlMjBldmVudCUyMHNwb3J0cyUyMGN1bHR1cmUlMjBmb29kJTIwb3V0ZG9vcnxlbnwwfHx8fDE3ODg2MjEwNDh8MA&ixlib=rb-4.1.0&q=85",
+        "alt": "Spotkanie towarzyskie w plenerze"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1528605248644-14dd04022da1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NjV8MHwxfHNlYXJjaHxfHxwZW9wbGUlMjBtZWV0dXAlMjBzb2NpYWwlMjBldmVudCUyMHNwb3J0cyUyMGN1bHR1cmUlMjBmb29kJTIwb3V0ZG9vcnxlbnwwfHx8fDE3ODg2MjEwNDh8MA&ixlib=rb-4.1.0&q=85",
+        "alt": "Wspólny posiłek i rozmowy przy stole"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1576867757603-05b134ebc379?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NjV8MHwxfHNlYXJjaHw0fHxwZW9wbGUlMjBtZWV0dXAlMjBzb2NpYWwlMjBldmVudCUyMHNwb3J0cyUyMGN1bHR1cmUlMjBmb29kJTIwb3V0ZG9vcnxlbnwwfHx8fDE3ODg2MjEwNDh8MA&ixlib=rb-4.1.0&q=85",
+        "alt": "Grupa znajomych jedząca razem na świeżym powietrzu"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1675674683873-1232862e3c64?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NjV8MHwxfHNlYXJjaHwyfHxwZW9wbGUlMjBtZWV0dXAlMjBzb2NpYWwlMjBldmVudCUyMHNwb3J0cyUyMGN1bHR1cmUlMjBmb29kJTIwb3V0ZG9vcnxlbnwwfHx8fDE3ODg2MjEwNDh8MA&ixlib=rb-4.1.0&q=85",
+        "alt": "Piknik i wydarzenie outdoorowe pod drzewami"
+      }
+    ],
+    "concerts_and_events": [
+      {
+        "url": "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NjZ8MHwxfHNlYXJjaHwyfHxjb25jZXJ0JTIwZmVzdGl2YWwlMjBzcG9ydHMlMjBvdXRkb29yJTIwYWN0aXZpdHl8ZW58MHx8fHwxNzg4NjIxMDU1fDA&ixlib=rb-4.1.0&q=85",
+        "alt": "Koncert muzyczny i scena"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NjZ8MHwxfHNlYXJjaHwxfHxjb25jZXJ0JTIwZmVzdGl2YWwlMjBzcG9ydHMlMjBvdXRkb29yJTIwYWN0aXZpdHl8ZW58MHx8fHwxNzg4NjIxMDU1fDA&ixlib=rb-4.1.0&q=85",
+        "alt": "Festiwal na otwartym terenie"
+      }
+    ],
+    "user_avatars": [
+      {
+        "url": "https://images.unsplash.com/photo-1592234789031-94bf65f630ed?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODd8MHwxfHNlYXJjaHw0fHxwb3J0cmFpdCUyMGF2YXRhciUyMHBlcnNvbiUyMHNtaWxpbmclMjBmcmllbmRseXxlbnwwfHx8fDE3ODg2MjEwNTJ8MA&ixlib=rb-4.1.0&q=85",
+        "name": "Jan Kowalski",
+        "role": "Organizator spotkań biegowych"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1625241152315-4a698f74ceb7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODd8MHwxfHNlYXJjaHwyfHxwb3J0cmFpdCUyMGF2YXRhciUyMHBlcnNvbiUyMHNtaWxpbmclMjBmcmllbmRseXxlbnwwfHx8fDE3ODg2MjEwNTJ8MA&ixlib=rb-4.1.0&q=85",
+        "name": "Marek Nowak",
+        "role": "Entuzjasta gier planszowych"
+      }
+    ]
+  },
+  "interactive_states_and_testids": {
+    "required_data_testids": [
+      "topbar-logo",
+      "topbar-search-input",
+      "topbar-city-filter",
+      "topbar-create-event-btn",
+      "topbar-user-avatar-btn",
+      "topbar-login-btn",
+      "topbar-register-btn",
+      "map-container",
+      "map-marker-pin",
+      "map-reset-view-btn",
+      "map-my-location-btn",
+      "sidebar-container",
+      "sidebar-close-btn",
+      "sidebar-category-filter-btn",
+      "sidebar-event-card",
+      "sidebar-event-join-btn",
+      "sidebar-event-leave-btn",
+      "sidebar-comment-input",
+      "sidebar-comment-submit-btn",
+      "create-event-title-input",
+      "create-event-category-select",
+      "create-event-date-picker",
+      "create-event-submit-btn",
+      "auth-email-input",
+      "auth-password-input",
+      "auth-submit-btn"
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Wszystkie napisy, przyciski, statusy oraz powiadomienia Sonner muszą być w języku POLSKIM.",
+    "Mapa Leaflet musi posiadać dopasowane pinezki z kolorowymi obwódkami i ikonami zależnymi od kategorii wydarzenia.",
+    "Aplikacja powinna zawierać mockowe wydarzenia w dużych polskich miastach (Warszawa, Kraków, Wrocław, Poznań, Gdańsk, Łódź, Katowice, Lublin, Szczecin) dla każdej z 8 kategorii.",
+    "Kiedy użytkownik kliknie pinezkę na mapie, panele boczne natychmiast wysuwają szczegóły danego wydarzenia z płynną animacją framer-motion.",
+    "Przy dodawaniu nowego wydarzenia, kliknięcie w dowolne miejsce na mapie automatycznie pobiera szerokość i długość geograficzną oraz wpisuje nazwę miejscowości/adresu w formularzu.",
+    "System komentarzy oraz lista dołączonych osób muszą działać w czasie rzeczywistym z natychmiastowym dodawaniem nowej odpowiedzi do stanu aplikacji.",
+    "Użyj biblioteki Sonner do eleganckich powiadomień Toast po polsku (np. 'Dołączono do wydarzenia!', 'Wydarzenie zostało utworzone', 'Zalogowano pomyślnie').",
+    "Upewnij się, że rozszerzenie Tailwind posiada zdefiniowane kolory kategorii i że żaden nagłówek nie używa domyślnego fontu Inter ani purpury #7351B7."
+  ]
+}
